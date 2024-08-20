@@ -1,0 +1,21 @@
+[project]
+name = "mediocreatbest"
+version = "0.3.0"
+description = "A mediocre at best utility library for Python"
+readme = "README.md"
+authors = [{name = "https://github.com/player1537"}]
+license = {text = "wtfpl"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/player1537/mediocreatbest"
+Issues = "https://github.com/player1537/mediocreatbest/issues"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
