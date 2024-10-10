@@ -971,3 +971,298 @@ def scope():
 
 # /scope
 
+
+def with_exit_stack(func, /):
+    signature = auto.inspect.signature(func)
+
+    @auto.functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with auto.contextlib.ExitStack() as stack:
+            if 'stack' in signature.parameters:
+                kwargs = kwargs | dict(stack=stack)
+            if 'enter' in signature.parameters:
+                kwargs = kwargs | dict(enter=stack.enter_context)
+            if 'defer' in signature.parameters:
+                kwargs = kwargs | dict(defer=stack.callback)
+
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
+def summary(
+    df,
+    /,
+) -> str:
+    df = df.sample(3, random_state=1337)
+
+    df = df.T
+
+    with auto.warnings.catch_warnings():
+        auto.warnings.simplefilter('ignore', FutureWarning)
+
+        df = df.applymap(str)
+        df = df.applymap(lambda s: auto.textwrap.shorten(s, 72//2))
+
+    return df.to_markdown()
+
+
+@with_exit_stack
+def encrypt(
+    *,   enter,
+
+    dec_path: auto.os.PathLike,
+
+    password: str | auto.typing.Literal[...] = ...,
+    password_name: str | None = None,
+
+    verbose: bool = True,
+
+    enc_path: auto.os.PathLike | auto.typing.Literal[...] = ...,
+    enc_root: auto.pathlib.Path | auto.typing.Literal[...] = ...,
+    enc_name: str | auto.typing.Literal[...] = ...,
+
+    tmp_path: auto.pathlib.Path | auto.typing.Literal[...] = ...,
+    tmp_root: auto.pathlib.Path | auto.typing.Literal[...] = ...,
+    tmp_name: str = 'encrypt.tmp',
+) -> auto.pathlib.Path:
+    dec_path = auto.pathlib.Path(dec_path)
+
+    if enc_path is ...:
+        if enc_root is ...:
+            enc_root = dec_path.parent
+        if enc_name is ...:
+            enc_name = f'{dec_path.name}.enc'
+        enc_path = enc_root / enc_name
+    else:
+        enc_path = auto.pathlib.Path(enc_path)
+
+    if password is ...:
+        global __94dc6d48
+        try: __94dc6d48
+        except NameError: __94dc6d48 = auto.functools.cache(auto.google.colab.userdata.get)
+        password = __94dc6d48(password_name)
+    assert password is not None
+
+    if tmp_path is ...:
+        if tmp_root is ...:
+            tmp_root = enc_path.parent
+        tmp_path = tmp_root / tmp_name
+
+    if verbose:
+        pbar = enter( auto.tqdm.auto.tqdm(
+            total=int(dec_path.stat().st_size),
+            unit='B',
+            unit_scale=True,
+            unit_divisor=1024,
+            desc='Encrypt',
+        ) )
+
+    p = enter( auto.subprocess.Popen([
+        'openssl', 'enc',
+        '-aes-256-ctr',
+        '-pbkdf2',
+        '-md', 'sha-256',
+        # '-in', enc_path,
+        '-out', tmp_path,
+        '-pass', f'pass:{password}',
+    ], stdin=auto.subprocess.PIPE) )
+
+    with dec_path.open('rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            if verbose:
+                pbar.update(len(chunk))
+
+            p.stdin.write(chunk)
+
+    p.stdin.close()
+    p.wait()
+    assert p.returncode == 0, p.returncode
+
+    tmp_path.rename(enc_path)
+    assert enc_path.exists(), enc_path
+
+    return enc_path
+
+
+@with_exit_stack
+def decrypt(
+    *,   enter,
+    verbose: bool = True,
+
+    enc_path: auto.os.PathLike,
+
+    password: str | auto.typing.Literal[...] = ...,
+    password_name: str | None = None,
+
+    dec_path: auto.os.PathLike,
+    dec_root: auto.pathlib.Path | auto.typing.Literal[...] = ...,
+    dec_name: str | auto.typing.Literal[...] = ...,
+
+    tmp_path: auto.pathlib.Path | auto.typing.Literal[...] = ...,
+    tmp_root: auto.pathlib.Path | auto.typing.Literal[...] = ...,
+    tmp_name: str = 'decrypt.tmp',
+) -> auto.pathlib.Path:
+    enc_path = auto.pathlib.Path(enc_path)
+
+    if dec_path is ...:
+        if dec_root is ...:
+            dec_root = enc_path.parent
+        if dec_name is ...:
+            dec_name = enc_path.name.removesuffix('.enc')
+        dec_path = dec_root / dec_name
+    else:
+        dec_path = auto.pathlib.Path(dec_path)
+
+    if password is ...:
+        global __94dc6d48
+        try: __94dc6d48
+        except NameError: __94dc6d48 = auto.functools.cache(auto.google.colab.userdata.get)
+        password = __94dc6d48(password_name)
+    assert password is not None
+
+    if tmp_path is ...:
+        if tmp_root is ...:
+            tmp_root = dec_path.parent
+        tmp_path = tmp_root / tmp_name
+
+    if verbose:
+        pbar = enter( auto.tqdm.auto.tqdm(
+            total=int(enc_path.stat().st_size),
+            unit='B',
+            unit_scale=True,
+            unit_divisor=1024,
+            desc='Decrypt',
+        ) )
+
+    p = enter( auto.subprocess.Popen([
+        'openssl', 'enc',
+        '-d',
+        '-aes-256-ctr',
+        '-pbkdf2',
+        '-md', 'sha-256',
+        '-out', tmp_path,
+        '-pass', f'pass:{password}',
+    ], stdin=auto.subprocess.PIPE) )
+
+    with enc_path.open('rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            if verbose:
+                pbar.update(len(chunk))
+
+            p.stdin.write(chunk)
+
+    p.stdin.close()
+    p.wait()
+    assert p.returncode == 0, p.returncode
+
+    tmp_path.rename(dec_path)
+    assert dec_path.exists(), dec_path
+
+    return dec_path
+
+
+@with_exit_stack
+def download(
+    *,   enter,
+    path: auto.pathlib.Path | str = None,
+    href: str = None,
+
+    verbose: bool = True,
+
+    tmp_path: auto.pathlib.Path | auto.typing.Literal[...] = ...,
+    tmp_root: auto.pathlib.Path | auto.typing.Literal[...] = ...,
+    tmp_name: str = 'download.tmp',
+) -> auto.pathlib.Path:
+    if isinstance(path, str):
+        path = auto.pathlib.Path(path)
+
+    if tmp_path is ...:
+        if tmp_root is ...:
+            tmp_root = path.parent
+        tmp_path = tmp_root / tmp_name
+
+    r = enter( auto.requests.request(
+        'GET',
+        href,
+        stream=True,
+    ) )
+    r.raise_for_status()
+
+    if verbose:
+        pbar = enter( auto.tqdm.auto.tqdm(
+            total=int(r.headers.get('Content-Length', 0)),
+            unit='B',
+            unit_scale=True,
+            unit_divisor=1024,
+            desc='Download',
+        ) )
+
+    with tmp_path.open('wb') as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            if verbose:
+                pbar.update(len(chunk))
+
+            f.write(chunk)
+
+    tmp_path.rename(path)
+    assert path.exists(), path
+
+    return path
+
+
+@with_exit_stack
+def checksum(
+    *,   enter,
+    path: auto.pathlib.Path | None = None,
+    hash: str | auto.typing.Literal[...] | None = None,
+
+    verbose: bool = True,
+):
+    if not hasattr(path, 'open'):
+        path = auto.pathlib.Path(path)
+
+    pbar = enter( auto.tqdm.auto.tqdm(
+        leave=False,
+        total=int(path.stat().st_size),
+        unit='B',
+        unit_scale=True,
+        unit_divisor=1024,
+        desc='Checksum',
+    ) )
+
+    h = auto.hashlib.new('sha256')
+    with path.open('rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            if verbose:
+                pbar.update(len(chunk))
+
+            h.update(chunk)
+
+    h = h.hexdigest()
+    assert h == hash, f'Invalid checksum: {h!r}'
+
+
+def with_random(
+    *,
+    seed: int | None = None,
+):
+    def wrapper(func, /):
+        @auto.functools.wraps(func)
+        def inner(
+            *args,
+            seed = seed,
+            Random: auto.mediocreatbest.RANDOM | auto.typing.Literal[...] = ...,
+            **kwargs,
+        ):
+            if Random is ...:
+                Random = auto.mediocreatbest.RANDOM(seed=seed)
+            kwargs = kwargs | dict(Random=Random)
+
+            ret = func(*args, **kwargs)
+
+            return ret
+
+        return inner
+
+    return wrapper

@@ -54,4 +54,8 @@ else:
         if hasattr(auto, args.name):
             delattr(auto, args.name)
 
-        return module
+        varname = args.name.split('.', 1)[0]
+        get_ipython().push({
+            varname: module,
+        })
+
