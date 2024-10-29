@@ -6,6 +6,7 @@ from ._auto import auto
 from ._contextgenerator import contextgenerator
 from ._doctest import doctest
 from . import _embed
+from ._getkey import getkey
 from ._grid import Grid
 from . import _module
 from ._random import RANDOM
@@ -13,8 +14,10 @@ from ._run import run
 from . import _scope
 from ._singledispatch import dispatch
 from . import _source
+from ._sqlquery import SQLQuery
 from ._stuple import stuple
 from ._textarea import Textarea
+from ._track import track
 from . import _verbatim
 from ._wrap import wrap
 
