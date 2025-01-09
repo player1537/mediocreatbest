@@ -34,6 +34,9 @@ go-Invoke-Environment() {
 }
 
 go-Build-Distribution() {
+    cd "${root:?}" \
+    || die "Failed to change directory to ${root:?}"
+
     pexec "${environment_dir:?}/bin/python" -m build \
         --sdist \
         --wheel \

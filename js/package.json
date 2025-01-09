@@ -1,0 +1,40 @@
+{
+    "name": "mediocreatbest",
+    "version": "0.3.6",
+    "author": "player1537",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/player1537/mediocreatbest"
+    },
+    "description": "A mediocre (at best) utility library for JavaScript.",
+    "keywords": [
+        "mab",
+        "mediocre",
+        "mediocreatbest",
+        "utility",
+        "library"
+    ],
+    "files": [
+        "dist"
+    ],
+    "type": "module",
+    "main": "./dist/mediocreatbest.umd.cjs",
+    "module": "./dist/mediocreatbest.js",
+    "exports": {
+        ".": {
+            "import": "./dist/mediocreatbest.js",
+            "require": "./dist/mediocreatbest.umd.cjs"
+        }
+    },
+    "scripts": {
+        "build": "vite build",
+        "test": "npx mocha"
+    },
+    "devDependencies": {
+        "mocha": "^11.0.1",
+        "vite": "^6.0.7"
+    },
+    "dependencies": {
+        "nunjucks": "^3.2.4"
+    }
+}

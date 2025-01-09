@@ -1,1 +1,1 @@
-# `mediocreatbest`: A utility library for Python
+# `mediocreatbest`: A mediocre (at best) utility library for Python and JavaScript
