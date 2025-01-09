@@ -1,6 +1,6 @@
 [project]
 name = "mediocreatbest"
-version = "0.3.6"
+version = "0.3.7"
 description = "A mediocre at best utility library for Python"
 readme = "README.md"
 authors = [{name = "https://github.com/player1537"}]
