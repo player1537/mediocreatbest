@@ -8,6 +8,9 @@ export default class LLM {
         cache = true,
         cachePrefix = 'llm-cache:',
     } = {}) {
+        if (!model) {
+            throw new Error('model is required');
+        }
         this.model = model;
         this.apiUrl = apiUrl;
         this.apiKey = apiKey;
@@ -24,9 +27,12 @@ export default class LLM {
     }
 
     async complete(prompt, options = {}) {
+        const isChat = options.messages && options.messages.length > 0;
+        const endpoint = isChat ? 'v1/chat/completions' : 'v1/completions';
         const mergedOptions = {
             ...this.defaultCompleteOptions,
             ...options,
+            model: this.model,
         };
         
         const ckey = this.generateCacheKey(mergedOptions);
@@ -75,14 +81,28 @@ export default class LLM {
         return result;
     }
 
-    generateCacheKey(options) {
-        const keyStr = JSON.stringify(options, Object.keys(options).sort());
+    generateCacheKey(options, endpoint) {
+        const keyStr = JSON.stringify({
+            ...options,
+            endpoint,
+        }, Object.keys(options).sort());
         const hash = CryptoJS.SHA256(keyStr);
         return `${this.cachePrefix}${hash.toString(CryptoJS.enc.Base64)}`;
     }
 
     async request(endpoint, options) {
-        const url = `${this.apiUrl}${endpoint}`;
+        let url;
+        if (endpoint === 'complete') {
+            if (options.messages) {
+                url = `${this.apiUrl}v1/chat/completions`;
+            } else {
+                url = `${this.apiUrl}v1/completions`;
+            }
+        } else if (endpoint === 'embed') {
+            url = `${this.apiUrl}v1/embeddings`;
+        } else {
+            url = `${this.apiUrl}${endpoint}`;
+        }
         const headers = {
             'Content-Type': 'application/json',
         };
