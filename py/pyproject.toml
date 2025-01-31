@@ -24,6 +24,11 @@ dev = [
 Homepage = "https://github.com/player1537/mediocreatbest"
 Issues = "https://github.com/player1537/mediocreatbest/issues"
 
+[project.entry-points]
+console_scripts = """
+mediocreatbest-aider-update-model-metadata = mediocreatbest.cli.aider_update_model_metadata:cli
+"""
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
