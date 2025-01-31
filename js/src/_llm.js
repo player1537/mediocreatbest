@@ -1,5 +1,3 @@
-import CryptoJS from 'crypto-js';
-
 export default class LLM {
     constructor({
         model,
@@ -81,13 +79,17 @@ export default class LLM {
         return result;
     }
 
-    generateCacheKey(options, endpoint) {
+    async generateCacheKey(options, endpoint) {
         const keyStr = JSON.stringify({
             ...options,
             endpoint,
         }, Object.keys(options).sort());
-        const hash = CryptoJS.SHA256(keyStr);
-        return `${this.cachePrefix}${hash.toString(CryptoJS.enc.Base64)}`;
+        const encoder = new TextEncoder();
+        const data = encoder.encode(keyStr);
+        const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return `${this.cachePrefix}${btoa(String.fromCharCode(...hashArray))}`;
     }
 
     async request(endpoint, options) {
