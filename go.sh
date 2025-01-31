@@ -10,6 +10,17 @@ go() { "go-$@"; }
 next() { "${FUNCNAME[1]:?}-$@"; }
 #---
 
+go-New-Environment() {
+    pexec uv venv --seed \
+    ##
+}
+
+go-Initialize-Environment() {
+    pexec uv pip install \
+        -e "${root:?}/py" \
+    ##
+}
+
 go-Test() {
     prun "${self:?}" Test-Py \
     ##
