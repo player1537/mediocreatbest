@@ -3,21 +3,22 @@ auto: Automatic Importer (and Package Installer)
 """
 
 from __future__ import annotations
+from functools import cached_property
 
 __all__ = [
     'auto',
 ]
 
 
-class AutoImportError(ImportError):
+class AutoInstallError(ImportError):
     pass
 
-class AutoImport(object):
+class AutoInstall(object):
     __install_names: ClassVar[dict[str, list[str]]] = {}
     __import_names: ClassVar[dict[str, list[str]]] = {}
 
     # XXX(th): My Jupyter notebooks keep crashing when Google Colab tries to access
-    # these properties, and AutoImport tries to install it. Hopefully this fixes that
+    # these properties, and AutoInstall tries to install it. Hopefully this fixes that
     # problem.
     __custom_documentations__ = {}
     __wrapped__ = None
@@ -107,7 +108,7 @@ class AutoImport(object):
         setattr(self, name, module)
         return module
 
-AutoImport.register('langchain', import_names=[
+AutoInstall.register('langchain', import_names=[
     'langchain',
 
     'langchain.adapters', 'langchain.agents', 'langchain._api',
@@ -188,40 +189,40 @@ AutoImport.register('langchain', import_names=[
 #     'langchain.vectorstores.docarray', 'langchain.vectorstores.redis'
 ])
 
-AutoImport.register('tf', import_names=[
+AutoInstall.register('tf', import_names=[
     'tensorflow',
 ])
 
-AutoImport.register('google', import_names=[
+AutoInstall.register('google', import_names=[
     'google', 'google.colab', 'google.colab.syntax', 'google.colab.userdata',
 ])
 
-AutoImport.register('tk', import_names=[
+AutoInstall.register('tk', import_names=[
     'tkinter', 'tkinter.ttk', 'tkinter.scrolledtext', 'tkinter.dnd',
     'tkinter.font', 'tkinter.tix', 'tkinter.colorchooser',
     'tkinter.messagebox',
 ])
 
-AutoImport.register('tkinter', import_names=[
+AutoInstall.register('tkinter', import_names=[
     'tkinter', 'tkinter.ttk', 'tkinter.scrolledtext', 'tkinter.dnd',
     'tkinter.font', 'tkinter.tix', 'tkinter.colorchooser',
     'tkinter.messagebox',
 ])
 
-AutoImport.register('ttk', import_names=[
+AutoInstall.register('ttk', import_names=[
     'tkinter.ttk', 'tkinter.scrolledtext', 'tkinter.dnd',
     'tkinter.font', 'tkinter.tix', 'tkinter.colorchooser',
     'tkinter.messagebox',
 ])
 
-AutoImport.register('np', install_names=['numpy'], import_names=['numpy'])
-AutoImport.register('pd', install_names=['pandas'], import_names=['pandas'])
+AutoInstall.register('np', install_names=['numpy'], import_names=['numpy'])
+AutoInstall.register('pd', install_names=['pandas'], import_names=['pandas'])
 
-AutoImport.register('tqdm', import_names=['tqdm', 'tqdm.auto', 'tqdm.notebook'])
+AutoInstall.register('tqdm', import_names=['tqdm', 'tqdm.auto', 'tqdm.notebook'])
 
 for pyplot_name in ['pyplot', 'plt']:
-    AutoImport.register(pyplot_name, install_names=['matplotlib'], import_names=['matplotlib.pyplot'])
-AutoImport.register('matplotlib', import_names=[
+    AutoInstall.register(pyplot_name, install_names=['matplotlib'], import_names=['matplotlib.pyplot'])
+AutoInstall.register('matplotlib', import_names=[
     'matplotlib',
     'matplotlib.pyplot',
 ])
@@ -234,7 +235,7 @@ AutoImport.register('matplotlib', import_names=[
 #     }
 #     console.log(texts.join("\n"));
 #   })();
-AutoImport.register('scipy', import_names=[
+AutoInstall.register('scipy', import_names=[
     "scipy",
     "scipy.cluster",
     "scipy.constants",
@@ -264,7 +265,7 @@ AutoImport.register('scipy', import_names=[
 #   }
 #   console.log(texts.join("\n"));
 #   })();
-AutoImport.register('sklearn', import_names=[
+AutoInstall.register('sklearn', import_names=[
     "sklearn",
     "sklearn.base",
     "sklearn.calibration",
@@ -373,7 +374,7 @@ AutoImport.register('sklearn', import_names=[
     "sklearn.utils",
 ])
 
-AutoImport.register('PIL', install_names=['pillow'], import_names=[
+AutoInstall.register('PIL', install_names=['pillow'], import_names=[
     'PIL',
     'PIL.BmpImagePlugin',
     'PIL.ExifTags',
@@ -407,6 +408,163 @@ machine_learning_packages = [
     'torch',
 ]
 for machine_learning_package in machine_learning_packages:
-    AutoImport.register(machine_learning_package, install_names=machine_learning_packages)
+    AutoInstall.register(machine_learning_package, install_names=machine_learning_packages)
 
-auto = AutoImport()
+autoinstall = AutoInstall()
+
+
+#---
+
+class AutoImport:
+    @cached_property
+    def importlib(auto):
+        import importlib
+        return importlib
+
+    def __getattr__(auto, name: str):
+        return auto.importlib.import_module(name)
+
+    def numpy(auto):
+        import numpy
+        import numpy.lib.recfunctions
+        return numpy
+
+    def np(auto):
+        return auto.numpy
+
+    def pd(auto):
+        return auto.pandas
+
+    def sklearn(auto):
+        import sklearn
+        import sklearn.base
+        import sklearn.calibration
+        import sklearn.cluster
+        import sklearn.compose
+        import sklearn.covariance
+        import sklearn.cross_decomposition
+        import sklearn.datasets
+        import sklearn.decomposition
+        import sklearn.discriminant_analysis
+        import sklearn.dummy
+        import sklearn.dummy
+        import sklearn.ensemble
+        import sklearn.ensemble
+        import sklearn.exceptions
+        import sklearn.experimental
+        import sklearn.feature_extraction
+        import sklearn.feature_extraction.image
+        import sklearn.feature_extraction.text
+        import sklearn.gaussian_process
+        import sklearn.impute
+        import sklearn.inspection
+        import sklearn.isotonic
+        import sklearn.kernel_approximation
+        import sklearn.kernel_ridge
+        import sklearn.linear_model
+        import sklearn.manifold
+        import sklearn.metrics
+        import sklearn.metrics.cluster
+        import sklearn.mixture
+        import sklearn.model_selection
+        import sklearn.multiclass
+        import sklearn.multioutput
+        import sklearn.naive_bayes
+        import sklearn.neighbors
+        import sklearn.neural_network
+        import sklearn.pipeline
+        import sklearn.preprocessing
+        import sklearn.random_projection
+        import sklearn.semi_supervised
+        import sklearn.svm
+        import sklearn.tree
+        import sklearn.utils
+        return sklearn
+
+    def scipy(auto):
+        import scipy
+        import scipy.cluster
+        import scipy.constants
+        import scipy.datasets
+        import scipy.fft
+        import scipy.fftpack
+        import scipy.integrate
+        import scipy.interpolate
+        import scipy.io
+        import scipy.linalg
+        import scipy.misc
+        import scipy.ndimage
+        import scipy.odr
+        import scipy.optimize
+        import scipy.signal
+        import scipy.sparse
+        import scipy.spatial
+        import scipy.special
+        import scipy.stats
+        return scipy
+
+    def mpl(auto):
+        return auto.matplotlib
+
+    def plt(auto):
+        return auto.matplotlib.pyplot
+    
+    def PIL(auto):
+        import PIL
+        import PIL.BmpImagePlugin
+        import PIL.ExifTags
+        import PIL.GifImagePlugin
+        import PIL.GimpGradientFile
+        import PIL.GimpPaletteFile
+        import PIL.Image
+        import PIL.ImageChops
+        import PIL.ImageColor
+        import PIL.ImageFile
+        import PIL.ImageMode
+        import PIL.ImageOps
+        import PIL.ImagePalette
+        import PIL.ImageSequence
+        import PIL.JpegImagePlugin
+        import PIL.JpegPresets
+        import PIL.PaletteFile
+        import PIL.PngImagePlugin
+        import PIL.PpmImagePlugin
+        import PIL.TiffImagePlugin
+        import PIL.TiffTags
+        return PIL
+
+    def tqdm(auto):
+        import tqdm
+        import tqdm.auto
+        import tqdm.notebook
+        return tqdm
+
+    def tkinter(auto):
+        import tkinter
+        import tkinter.ttk
+        import tkinter.scrolledtext
+        import tkinter.dnd
+        import tkinter.font
+        import tkinter.tix
+        import tkinter.colorchooser
+        import tkinter.messagebox
+        return tkinter
+
+    def google(auto):
+        import google
+        import google.colab
+        import google.colab.syntax
+        import google.colab.userdata
+        return google
+
+autoimport = AutoImport()
+
+
+#---
+
+try:
+    get_ipython
+except NameError:
+    auto = autoimport
+else:
+    auto = autoinstall

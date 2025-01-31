@@ -18,6 +18,14 @@ go-Build-Package() {
     ##
 }
 
+go-Deploy-Package() {
+    cd "${root:?}" \
+    || die "cd ${root:?}"
+
+    pexec npm publish \
+    ##
+}
+
 unset VAINL_API_KEY
 
 go-Test-Package() {

@@ -20,7 +20,7 @@ go-New-Environment() {
 
 go-Initialize-Environment() {
     pexec "${environment_dir:?}/bin/pip" install \
-        --editable "${root:?}" \
+        --editable "${root:?}[dev]" \
         build \
         twine \
     ##
@@ -33,9 +33,19 @@ go-Invoke-Environment() {
     ##
 }
 
+go-Test() {
+    go-Invoke-Environment pytest "${root:?}/test.py" \
+    ##
+}
+
 go-Build-Distribution() {
     cd "${root:?}" \
     || die "Failed to change directory to ${root:?}"
+
+    prun rm -rv \
+        "${root:?}/dist" \
+        "${root:?}/build" \
+    ##
 
     pexec "${environment_dir:?}/bin/python" -m build \
         --sdist \

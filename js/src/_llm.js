@@ -169,3 +169,38 @@ export default class LLM {
         return {};
     }
 }
+
+
+class SaharaLlama extends LLM {
+    constructor(options) {
+        let {
+            model = 'llama',
+            apiUrl = 'https://completion.on.sahara.is.mediocreatbest.xyz/llama/',
+            cachePrefix = 'SaharaLlama:',
+            ...rest
+        } = options;
+
+        super({
+            model,
+            apiUrl,
+            cachePrefix,
+            ...rest,
+        });
+    }
+
+    get defaultCompleteOptions() {
+        return {
+            max_tokens: 300,
+            temperature: 0.0,
+            frequency_penalty: 0,
+            presence_penalty: 0,
+        };
+    }
+
+    get defaultEmbedOptions() {
+        return {};
+    }
+}
+
+LLM.SaharaLlama = SaharaLlama;
+

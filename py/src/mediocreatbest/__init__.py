@@ -532,27 +532,6 @@ def scope():
 # /scope
 
 
-#--- ChatML
-
-def ChatML(messages: list[dict], /):
-    prompt = ChatML.template.render(
-        messages=messages,
-    )
-
-    return prompt
-
-ChatML.template = auto.jinja2.Environment().from_string('''
-{%- for message in messages -%}
-<|im_start|>{{ message.role }}
-{%- if message.content %}
-{{ message.content }}
-<|im_end|>
-{% else %}
-{% endif -%}
-{%- endfor -%}
-''')
-
-
 def scope():
     messages = [
         {
@@ -768,145 +747,6 @@ tot_park_area_sqmiles'''.split('\n'))
 
     auto.pprint.pp(lookup[['risk', 'prevention', 'park area']])
     auto.pprint.pp(lookup[[('risk', 1), ('prevention', 1), ('park area', 1)]])
-
-# /scope
-
-
-#--- Novelty
-
-#@title Novelty { display-mode: "form" }
-#@markdown ```python
-#@markdown Novelty = (
-#@markdown     document: str,
-#@markdown     /,
-#@markdown     *,
-#@markdown     config = Novelty.config,
-#@markdown     cache: bool=True,
-#@markdown ) -> auto.types.SimpleNamespace(
-#@markdown     tokens: list[str],
-#@markdown     scores: list[float],
-#@markdown )
-#@markdown
-#@markdown Novelty.tokenize = (
-#@markdown     document: str,
-#@markdown     /,
-#@markdown     *,
-#@markdown     config = Novelty.config,
-#@markdown ) -> list[str]
-#@markdown ```
-
-
-def Novelty(document: str, /, *, config=None, cache: bool=True):
-    if config is None:
-        config = Novelty.config
-
-    url = config.base_url
-    url = auto.urllib.parse.urljoin(
-        url,
-        'novelty',
-    )
-
-    headers = {}
-    headers['Authorization'] = f'Bearer {config.api_key}'
-
-    json = {}
-    json['document'] = document
-
-    identity = auto.json.dumps(json, sort_keys=True)
-    identity = auto.hashlib.sha256(identity.encode('utf-8')).hexdigest()
-    identity = f'Novelty:{identity}'
-
-    # if identity not in Novelty.cache:
-    if (not cache) or (identity not in Novelty.cache):
-        with Novelty.session.request(
-            'POST',
-            url,
-            headers=headers,
-            json=json,
-        ) as response:
-            response.raise_for_status()
-            json = response.json()
-
-        if cache:
-            Novelty.cache[identity] = auto.json.dumps(json)
-
-    else:
-        json = auto.json.loads(Novelty.cache[identity])
-
-    tokens = json.pop('tokens')
-    scores = json.pop('scores')
-    assert not json, list(json.keys())
-
-    novelty = auto.types.SimpleNamespace(
-        tokens=tokens,
-        scores=scores,
-    )
-    return novelty
-
-def __Novelty_tokenize(document: str, /, *, config=None):
-    if config is None:
-        config = Novelty.config
-
-    url = config.base_url
-    url = auto.urllib.parse.urljoin(
-        url,
-        'tokenize',
-    )
-
-    headers = {}
-    headers['Authorization'] = f'Bearer {config.api_key}'
-
-    json = {}
-    json['document'] = document
-
-    with Novelty.session.request(
-        'POST',
-        url,
-        headers=headers,
-        json=json,
-    ) as response:
-        response.raise_for_status()
-        json = response.json()
-
-    json = auto.copy.copy(json)
-    tokens = json.pop('tokens')
-    assert not json, list(json.keys())
-
-    return tokens
-
-try:
-    __Novelty_cache
-except NameError:
-    __Novelty_cache = (
-        {}
-        # auto.shelve.open('Novelty.cache', 'c')
-    )
-
-# Novelty.config = config.learned_quality
-Novelty.session = auto.requests.Session()
-Novelty.cache = __Novelty_cache
-Novelty.tokenize = __Novelty_tokenize
-
-def scope():
-    documents = []
-    documents += ['The quick brown fox jumps over the lazy dog.'] * 2
-    documents += ['What is the meaning of life?'] * 2
-    documents += ['What is the purpose of life?'] * 2
-
-    for document in documents:
-        novelty = Novelty(
-            document,
-            cache=False,
-        )
-        auto.pprint.pp(novelty)
-
-# /scope
-
-def scope():
-    tokens = Novelty.tokenize(
-        'The quick brown fox jumps over the lazy dog.',
-    )
-    auto.pprint.pp(tokens)
 
 # /scope
 
@@ -1269,3 +1109,411 @@ def with_random(
         return inner
 
     return wrapper
+
+
+
+@with_exit_stack
+def checksum(
+    *,   enter,
+    path: auto.pathlib.Path | None = None,
+    hash: str | auto.typing.Literal[...] | None = None,
+
+    verbose: bool = True,
+):
+    if hash is None:
+        return
+
+    if not hasattr(path, 'open'):
+        path = auto.pathlib.Path(path)
+
+    pbar = enter( auto.tqdm.auto.tqdm(
+        leave=False,
+        total=int(path.stat().st_size),
+        unit='B',
+        unit_scale=True,
+        unit_divisor=1024,
+        desc='Checksum',
+    ) )
+
+    h = auto.hashlib.new('sha256')
+    with path.open('rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            if verbose:
+                pbar.update(len(chunk))
+
+            h.update(chunk)
+
+    h = h.hexdigest()
+    if hash is not Ellipsis:
+        assert h == hash, f'Invalid checksum: {h!r}'
+    else:
+        print(f'Checksum: {h!r}')
+
+
+
+@with_exit_stack
+def terminal(
+    args: str | list,
+    *,   enter,
+    verbose: bool = True,
+) -> None:
+    tmpdir = enter( auto.tempfile.TemporaryDirectory() )
+    tmpdir = auto.pathlib.Path(tmpdir)
+
+    has_tmux = auto.shutil.which('tmux') is not None
+
+    canary = tmpdir / '__terminal_canary'
+
+
+    if isinstance(args, str):
+        if verbose:
+            print('$', args)
+
+        args = ['bash', '-c', args, '<bash -c>']
+
+    else:
+        if verbose:
+            print('$', auto.shlex.join(map(str, args)))
+
+    assert isinstance(args, list), type(args)
+
+    args = [
+        'bash', '-c', (
+            r'''onexit() { touch "${canary:?}"; }; '''
+            r'''canary=${1:?}; shift; '''
+            r'''trap onexit EXIT; '''
+            r'''"${@:?}"'''
+        ), '<bash -c>', *[
+            canary,
+            *args,
+        ],
+    ]
+
+    if isinstance(args, list):
+        args = auto.shlex.join(map(str, args))
+    assert isinstance(args, str), type(args)
+
+    if has_tmux:
+        process = auto.subprocess.run([
+            'tmux', 'list-sessions',
+        ], stdin=auto.subprocess.DEVNULL, stdout=auto.subprocess.PIPE, check=False)
+
+        if process.returncode != 0:
+            try:
+                get_ipython
+            except NameError:
+                auto.subprocess.run([
+                    'tmux', 'new-session', '-d', '-s', '0',
+                ], check=True)
+            else:
+                get_ipython().system('tmux new-session -d -s 0')
+
+    if has_tmux:
+        args = [
+            'tmux', 'send-keys', *[
+                args,
+                'C-m',
+            ],
+        ]
+    else:
+        args = [
+            'bash', '-c', args,
+        ]
+
+    try:
+        get_ipython
+    except NameError:
+        auto.subprocess.run(
+            args,
+            check = True,
+        )
+    else:
+        get_ipython().system('{auto.shlex.join(args)}')
+
+    while True:
+        if canary.exists():
+            break
+
+        auto.time.sleep(0.1)
+
+    canary.unlink()
+
+
+@with_exit_stack
+def scp(
+    *args,
+    verbose: bool = True,
+    key: str | auto.typing.Literal[...] | None = ...,
+    key_name: str = 'SSH_KEY',
+       enter,
+):
+    if key is ...:
+        key = auto.mediocreatbest.getkey(key_name)
+        key = auto.base64.b64decode(key)
+
+    if key is not None:
+        tmp = enter( auto.tempfile.TemporaryDirectory() )
+        tmp = auto.pathlib.Path(tmp)
+
+        tmp_key = tmp / 'id_rsa'
+        tmp_key.write_bytes(key)
+        tmp_key.chmod(0o600)
+
+        args = [
+            '-i', tmp_key,
+            *args,
+        ]
+
+    canary = tmp / 'canary'
+    name = f'scp-{auto.uuid.uuid4()}'
+
+    args = [
+        '-o', 'StrictHostKeyChecking=no',
+        '-o', 'UserKnownHostsFile=/dev/null',
+        '-o', 'BatchMode=yes',
+        *args,
+    ]
+
+    args = [
+        'scp',
+        *args,
+    ]
+
+    print(f'$ {auto.shlex.join(map(str, args))}')
+
+    # args = [
+    #     'bash', '-c', auto.textwrap.dedent(r'''
+    #         set -euo pipefail
+
+    #         canary=${1:?}; shift
+    #         onexit() { touch "${canary:?}"; }
+    #         trap onexit EXIT
+
+    #         cd /content
+    #         "${@:?}"
+    #     '''), '<bash -c>', *[
+    #         canary,
+    #     ],
+    #     'tmux', 'new-window', *[
+    #         '-t', f'1',
+    #         '-n', name,
+    #         *args,
+    #     ],
+    # ]
+
+    # !{auto.shlex.join(map(str, args))}
+
+    auto.mediocreatbest.terminal(
+        args,
+        verbose = False,
+    )
+
+    # while not canary.exists():
+    #     auto.time.sleep(0.1)
+
+
+def summary(
+    arg,
+    /,
+) -> str:
+    is_pandas = isinstance(arg, auto.pd.DataFrame)
+    if is_pandas:
+        return summary_pandas_DataFrame(arg)
+
+    is_sqlite3 = any([
+        isinstance(arg, auto.sqlite3.Connection),
+        all([
+            hasattr(arg, 'execute'),
+            hasattr(arg, 'commit'),
+        ]),
+    ])
+    if is_sqlite3:
+        return summary_sqlite3_Connection(arg)
+
+    assert False, type(arg)
+
+
+def summary_pandas_DataFrame(
+    df,
+    /,
+) -> str:
+    if len(df) > 3:
+        df = df.sample(3, random_state=1337)
+
+    df = df.T
+
+    with auto.warnings.catch_warnings():
+        auto.warnings.simplefilter('ignore', FutureWarning)
+
+        df = df.applymap(str)
+        df = df.applymap(lambda s: auto.textwrap.shorten(s, 72//2))
+
+    return df.to_markdown()
+
+
+@with_exit_stack
+def summary_sqlite3_Connection(
+    conn,
+    /,
+    *,   enter,
+) -> str:
+    enter( auto.contextlib.redirect_stdout(
+        (io := auto.io.StringIO()),
+    ) )
+
+    df = auto.pd.read_sql(auto.mediocreatbest.SQLQuery(r'''
+        PRAGMA database_list
+    '''), conn)
+
+    df.set_index([
+        'seq',
+    ], inplace=True)
+    df.sort_index(inplace=True)
+
+    first = True
+    for _seq, row in df.iterrows():
+        schema_name = row['name']
+
+        df = auto.pd.read_sql(auto.mediocreatbest.SQLQuery(r'''
+            SELECT *
+            FROM {{ schema_name |tosqlref }}.sqlite_master
+        ''', schema_name=schema_name), conn)
+
+        df.set_index([
+            'type',
+            'name',
+        ], inplace=True)
+
+        df.sort_values([
+            'rootpage',
+        ], inplace=True)
+
+        for (type, name), row in df.iterrows():
+            if type == 'table':
+                table_name = row['tbl_name']
+
+                if table_name.startswith('sqlite_'):
+                    continue
+                if table_name.startswith('sqlean_'):
+                    continue
+
+                count ,= conn.execute(auto.mediocreatbest.SQLQuery(r'''
+                    SELECT
+                        MAX(ROWID)
+                    FROM {{ schema_name |tosqlref }}.{{ table_name |tosqlref }}
+                    LIMIT 1
+                ''', schema_name=schema_name, table_name=table_name)).fetchone()
+
+                assert count is not None, (schema_name, table_name)
+
+                rowids = auto.random.Random(1337).sample(range(1, count + 1), 3)
+
+                df = auto.pd.read_sql(auto.mediocreatbest.SQLQuery(r'''
+                    SELECT
+                        *
+                        , ROWID AS rowid
+                    FROM {{ schema_name |tosqlref }}.{{ table_name |tosqlref }}
+                    WHERE ROWID IN (
+                        {%- set sep = joiner(", ") %}
+                        {%- for rowid in rowids %}
+                        {{ sep() }}{{ rowid |tosqlint }}
+                        {%- endfor %}
+                    )
+                ''', schema_name=schema_name, table_name=table_name, rowids=rowids), conn)
+
+                df.set_index([
+                    'rowid',
+                ], inplace=True)
+                df.sort_index(inplace=True)
+
+                text = summary(df)
+
+                ref = auto.mediocreatbest.SQLQuery(r'''
+                    {{ schema_name |tosqlref }}.{{ table_name |tosqlref }} ({{ count }})
+                ''', schema_name=schema_name, table_name=table_name, count=count)
+                ref = ref.strip()
+
+                text = auto.re.sub(r'''
+                    \|\s+\|
+                ''', f'| {ref} |', text, count=1, flags=auto.re.VERBOSE)
+
+                if not first:
+                    print()
+                    print('---')
+                    print()
+                else:
+                    first = False
+
+                print(text)
+
+            elif type == 'index':
+                print(row['sql'])
+                if not first:
+                    print()
+                    print('---')
+                    print()
+                else:
+                    first = False
+                print()
+
+    return io.getvalue()
+
+
+@with_exit_stack
+def df2sql(
+    df: auto.pd.DataFrame,
+    name: str,
+    conn: auto.sqlite3.Connection,
+    *,   enter,
+    batch: int = 10_000,
+    verbose: bool = True,
+    index: bool = True,
+    if_exists: str = 'replace',
+):
+    count = len(df)
+
+    it = (
+        (beg, min(count, beg + batch))
+        for beg in range(0, len(df), batch)
+    )
+
+    if verbose:
+        pbar = enter( auto.tqdm.auto.tqdm(
+            total=len(df),
+            unit='row',
+            unit_scale=True,
+        ) )
+
+    for i, (beg, end) in enumerate(it):
+        if verbose:
+            pbar.update(end - beg)
+
+        df.iloc[beg:end].to_sql(
+            name,
+            conn,
+            if_exists=(
+                if_exists
+            ) if i == 0 else (
+                'append'
+            ),
+            index=index,
+        )
+
+    conn.commit()
+
+
+#@title Random
+
+class _Random(auto.random.Random):
+    def __int__(self) -> int:
+        return self.getrandbits(64)
+
+
+def Random(*seeds: int) -> _Random:
+    assert len(seeds) > 0, len(seeds)
+    seed = auto.json.dumps(seeds, separators=(',', ':'))
+    seed = auto.hashlib.md5(seed.encode()).digest()
+
+    random = _Random(seed)
+
+    return random

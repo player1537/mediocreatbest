@@ -1,6 +1,6 @@
 [project]
 name = "mediocreatbest"
-version = "0.3.7"
+version = "0.3.10"
 description = "A mediocre at best utility library for Python"
 readme = "README.md"
 authors = [{name = "https://github.com/player1537"}]
@@ -10,6 +10,14 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+]
+
+dependencies = [
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
 ]
 
 [project.urls]
