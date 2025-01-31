@@ -26,16 +26,16 @@ export default class LLM {
         }
     }
 
-    async complete(prompt, options = {}) {
-        const isChat = options.messages && options.messages.length > 0;
+    async complete(body = {}) {
+        const isChat = 'messages' in body;
         const endpoint = isChat ? 'v1/chat/completions' : 'v1/completions';
         const mergedOptions = {
             ...this.defaultCompleteOptions,
-            ...options,
+            ...body,
             model: this.model,
         };
         
-        const ckey = this.generateCacheKey(mergedOptions);
+        const ckey = this.generateCacheKey(mergedOptions, endpoint);
         let result;
         
         if (this.cache) {
@@ -46,7 +46,7 @@ export default class LLM {
         }
         
         if (!result) {
-            result = await this.request('complete', mergedOptions);
+            result = await this.request(endpoint, mergedOptions);
             if (this.cache) {
                 this.cache.set(ckey, result);
             }
@@ -55,13 +55,13 @@ export default class LLM {
         return result;
     }
 
-    async embed(inputs, options = {}) {
+    async embed(body = {}) {
         const mergedOptions = {
             ...this.defaultEmbedOptions,
-            ...options,
+            ...body,
         };
         
-        const ckey = this.generateCacheKey(mergedOptions);
+        const ckey = this.generateCacheKey(mergedOptions, 'v1/embeddings');
         let result;
         
         if (this.cache) {
@@ -72,7 +72,7 @@ export default class LLM {
         }
         
         if (!result) {
-            result = await this.request('embed', mergedOptions);
+            result = await this.request('v1/embeddings', mergedOptions);
             if (this.cache) {
                 this.cache.set(ckey, result);
             }
