@@ -108,6 +108,10 @@ class AutoInstall(object):
         setattr(self, name, module)
         return module
 
+    def self(auto):
+        import mediocreatbest
+        return mediocreatbest
+
 AutoInstall.register('langchain', import_names=[
     'langchain',
 
@@ -423,6 +427,10 @@ class AutoImport:
 
     def __getattr__(auto, name: str):
         return auto.importlib.import_module(name)
+
+    def self(auto):
+        import mediocreatbest
+        return mediocreatbest
 
     def numpy(auto):
         import numpy

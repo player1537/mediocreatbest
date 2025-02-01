@@ -35,6 +35,9 @@ def __getattr__(name: str):
         raise AttributeError(name)
 
     ckey = f'mediocreatbest.{name}'
+    if ckey == 'mediocreatbest.lib':
+        return auto.sys.modules['mediocreatbest']
+
     if ckey in auto.sys.modules:
         module = auto.sys.modules[ckey]
         return module

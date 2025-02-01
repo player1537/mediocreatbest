@@ -49,6 +49,26 @@ go-Test-Js() {
     ##
 }
 
+go-Build-PyPackage() {
+    pexec "${root:?}/py/go.sh" Build-Distribution \
+    ##
+}
+
+go-Deploy-PyPackage() {
+    pexec "${root:?}/py/go.sh" Deploy-Distribution \
+    ##
+}
+
+go-Build-JsPackage() {
+    pexec "${root:?}/js/go.sh" Build-Package \
+    ##
+}
+
+go-Deploy-JsPackage() {
+    pexec "${root:?}/js/go.sh" Deploy-Package \
+    ##
+}
+
 
 #---
 test -f "${root:?}/env.sh" && source "${_:?}"
