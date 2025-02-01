@@ -108,6 +108,7 @@ class AutoInstall(object):
         setattr(self, name, module)
         return module
 
+    @property
     def self(auto):
         import mediocreatbest
         return mediocreatbest
@@ -428,21 +429,26 @@ class AutoImport:
     def __getattr__(auto, name: str):
         return auto.importlib.import_module(name)
 
+    @property
     def self(auto):
         import mediocreatbest
         return mediocreatbest
 
+    @property
     def numpy(auto):
         import numpy
         import numpy.lib.recfunctions
         return numpy
 
+    @property
     def np(auto):
         return auto.numpy
 
+    @property
     def pd(auto):
         return auto.pandas
 
+    @property
     def sklearn(auto):
         import sklearn
         import sklearn.base
@@ -489,6 +495,7 @@ class AutoImport:
         import sklearn.utils
         return sklearn
 
+    @property
     def scipy(auto):
         import scipy
         import scipy.cluster
@@ -511,12 +518,15 @@ class AutoImport:
         import scipy.stats
         return scipy
 
+    @property
     def mpl(auto):
         return auto.matplotlib
 
+    @property
     def plt(auto):
         return auto.matplotlib.pyplot
     
+    @property
     def PIL(auto):
         import PIL
         import PIL.BmpImagePlugin
@@ -541,12 +551,14 @@ class AutoImport:
         import PIL.TiffTags
         return PIL
 
+    @property
     def tqdm(auto):
         import tqdm
         import tqdm.auto
         import tqdm.notebook
         return tqdm
 
+    @property
     def tkinter(auto):
         import tkinter
         import tkinter.ttk
@@ -558,6 +570,7 @@ class AutoImport:
         import tkinter.messagebox
         return tkinter
 
+    @property
     def google(auto):
         import google
         import google.colab

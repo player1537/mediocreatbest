@@ -3,6 +3,7 @@
 """
 from __future__ import annotations
 from ._auto import auto
+from ._config import config
 from ._contextgenerator import contextgenerator
 from ._doctest import doctest
 from . import _embed
