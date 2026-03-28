@@ -1160,13 +1160,15 @@ def terminal(
     args: str | list,
     *,   enter,
     verbose: bool = True,
+    wait: bool = True,
 ) -> None:
     tmpdir = enter( auto.tempfile.TemporaryDirectory() )
     tmpdir = auto.pathlib.Path(tmpdir)
 
     has_tmux = auto.shutil.which('tmux') is not None
 
-    canary = tmpdir / '__terminal_canary'
+    if wait:
+        canary = tmpdir / '__terminal_canary'
 
 
     if isinstance(args, str):
@@ -1181,17 +1183,18 @@ def terminal(
 
     assert isinstance(args, list), type(args)
 
-    args = [
-        'bash', '-c', (
-            r'''onexit() { touch "${canary:?}"; }; '''
-            r'''canary=${1:?}; shift; '''
-            r'''trap onexit EXIT; '''
-            r'''"${@:?}"'''
-        ), '<bash -c>', *[
-            canary,
-            *args,
-        ],
-    ]
+    if wait:
+        args = [
+            'bash', '-c', (
+                r'''onexit() { touch "${canary:?}"; }; '''
+                r'''canary=${1:?}; shift; '''
+                r'''trap onexit EXIT; '''
+                r'''"${@:?}"'''
+            ), '<bash -c>', *[
+                canary,
+                *args,
+            ],
+        ]
 
     if isinstance(args, list):
         args = auto.shlex.join(map(str, args))
@@ -1234,13 +1237,14 @@ def terminal(
     else:
         get_ipython().system('{auto.shlex.join(args)}')
 
-    while True:
-        if canary.exists():
-            break
-
-        auto.time.sleep(0.1)
-
-    canary.unlink()
+    if wait:
+        while True:
+            if canary.exists():
+                break
+    
+            auto.time.sleep(0.1)
+    
+        canary.unlink()
 
 
 @with_exit_stack
