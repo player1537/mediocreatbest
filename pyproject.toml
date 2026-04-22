@@ -26,6 +26,8 @@ Issues = "https://github.com/player1537/mediocreatbest/issues"
 
 [project.entry-points.console_scripts]
 mediocreatbest-aider-update-model-metadata = "mediocreatbest.cli.aider_update_model_metadata:cli"
+mab-amend-commit-cl = "mediocreatbest.cli.amend_commit_cl:main"
+mab-amend-commit-pi = "mediocreatbest.cli.amend_commit_pi:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]
