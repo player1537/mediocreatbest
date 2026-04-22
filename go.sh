@@ -17,15 +17,14 @@ go-New-Environment() {
 
 go-Initialize-Environment() {
     pexec uv pip install \
-        -e "${root:?}/py" \
+        -e "${root:?}[dev]" \
+        build \
+        twine \
     ##
 }
 
 go-Test() {
     prun "${self:?}" Test-Py \
-    ##
-
-    pexec "${self:?}" Test-Js \
     ##
 }
 
@@ -40,32 +39,37 @@ go-Test-Me() {
 }
 
 go-Test-Py() {
-    pexec "${root:?}/py/go.sh" Test \
-    ##
-}
-
-go-Test-Js() {
-    pexec "${root:?}/js/go.sh" Test-Package \
+    pexec pytest "${root:?}/test.py" \
     ##
 }
 
 go-Build-PyPackage() {
-    pexec "${root:?}/py/go.sh" Build-Distribution \
+    cd "${root:?}" \
+    || die "Failed to change directory to ${root:?}"
+
+    prun rm -rv \
+        "${root:?}/dist" \
+        "${root:?}/build" \
+    ##
+
+    pexec uv run --with=build --with=twine python -m build \
+        --sdist \
+        --wheel \
+        --outdir "${root:?}/dist" \
+    ##
+}
+
+go-Deploy-TestDistribution() {
+    pexec uv run --with=twine twine upload \
+        --repository testpypi \
+        --repository-url https://test.pypi.org/legacy/ \
+        "${root:?}/dist"/* \
     ##
 }
 
 go-Deploy-PyPackage() {
-    pexec "${root:?}/py/go.sh" Deploy-Distribution \
-    ##
-}
-
-go-Build-JsPackage() {
-    pexec "${root:?}/js/go.sh" Build-Package \
-    ##
-}
-
-go-Deploy-JsPackage() {
-    pexec "${root:?}/js/go.sh" Deploy-Package \
+    pexec uv run --with=twine twine upload \
+        "${root:?}/dist"/* \
     ##
 }
 

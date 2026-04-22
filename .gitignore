@@ -1,4 +1,31 @@
-.env
+
+# Byte-compiled / optimized / DLL files
+# C extensions
+# Compiled Python files
+# Distribution / packaging
+# IDE specific files
+# Logs and databases
+# OS generated files
+# Virtual environments
+*$py.class
+*.egg
+*.egg-info/
+*.log
+*.py[cod]
+*.pyc
+*.so
+*.sqlite3
+.DS_Store
 .aider*
-__pycache__
+.env
+.idea/
 .venv
+.vscode/
+/.env
+/env
+/venv
+Thumbs.db
+__pycache__
+__pycache__/
+build/
+dist/
