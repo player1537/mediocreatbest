@@ -15,23 +15,17 @@ from claude_code_transcripts import find_local_sessions, parse_session_file
 
 
 def filter_message_content(text: str) -> str:
-    """Remove XML tags and skill execution details from message content."""
+    """Remove remaining XML tags from message content."""
+    # Remove any remaining system-generated XML blocks
+    text = re.sub(r'<local-command-\w+>.*?</local-command-\w+>', '', text, flags=re.DOTALL)
     text = re.sub(r'<command-\w+>.*?</command-\w+>', '', text, flags=re.DOTALL)
+    text = re.sub(r'<system-reminder>.*?</system-reminder>', '', text, flags=re.DOTALL)
     text = re.sub(r'<[^>]+>', '', text)
 
     if 'Base directory for this skill' in text:
         text = text.split('Base directory for this skill')[0]
 
-    lines = text.split('\n')
-    filtered_lines = []
-    for i, line in enumerate(lines):
-        if line.strip() == '---' and i + 1 < len(lines):
-            next_line = lines[i + 1].strip()
-            if next_line.startswith('<command-') or next_line.startswith('Base directory'):
-                break
-        filtered_lines.append(line)
-
-    return '\n'.join(filtered_lines).strip()
+    return text.strip()
 
 
 def extract_user_prompts(session_file: Path) -> str:
@@ -42,6 +36,10 @@ def extract_user_prompts(session_file: Path) -> str:
     prompts = []
     for entry in loglines:
         if entry.get('type') != 'user':
+            continue
+
+        # Skip system-generated metadata messages
+        if entry.get('isMeta', False):
             continue
 
         message = entry.get('message', {})
@@ -129,7 +127,9 @@ def amend_commit_with_transcript(transcript_text: str) -> None:
 
 
 @click.command()
-def main() -> None:
+@click.option('--debug-print-only', is_flag=True, help='Print extracted transcript without amending commit.')
+@click.option('--debug-select-index', type=int, default=None, help='Select session by index without interactive prompt.')
+def main(debug_print_only: bool, debug_select_index: int | None) -> None:
     """Extract user prompts from a Claude Code session and amend the current commit."""
     projects_folder = Path.home() / '.claude' / 'projects'
 
@@ -145,27 +145,35 @@ def main() -> None:
         click.echo('No local sessions found.')
         return
 
-    choices = []
-    for filepath, summary in results:
-        stat = filepath.stat()
-        mod_time = datetime.fromtimestamp(stat.st_mtime)
-        size_kb = stat.st_size / 1024
-        date_str = mod_time.strftime('%Y-%m-%d %H:%M')
-        if len(summary) > 50:
-            summary = summary[:47] + '...'
-        display = f'{date_str}  {size_kb:5.0f} KB  {summary}'
-        choices.append(questionary.Choice(title=display, value=filepath))
+    # Handle debug-select-index
+    if debug_select_index is not None:
+        if debug_select_index < 0 or debug_select_index >= len(results):
+            click.echo(f'Error: Index {debug_select_index} out of range (0-{len(results) - 1})')
+            return
+        session_file = results[debug_select_index][0]
+        click.echo(f'Selected session at index {debug_select_index}')
+    else:
+        choices = []
+        for filepath, summary in results:
+            stat = filepath.stat()
+            mod_time = datetime.fromtimestamp(stat.st_mtime)
+            size_kb = stat.st_size / 1024
+            date_str = mod_time.strftime('%Y-%m-%d %H:%M')
+            if len(summary) > 50:
+                summary = summary[:47] + '...'
+            display = f'{date_str}  {size_kb:5.0f} KB  {summary}'
+            choices.append(questionary.Choice(title=display, value=filepath))
 
-    selected = questionary.select(
-        'Select a session to convert:',
-        choices=choices,
-    ).ask()
+        selected = questionary.select(
+            'Select a session to convert:',
+            choices=choices,
+        ).ask()
 
-    if selected is None:
-        click.echo('No session selected.')
-        return
+        if selected is None:
+            click.echo('No session selected.')
+            return
 
-    session_file = selected
+        session_file = selected
 
     click.echo('Extracting user prompts...')
     transcript_text = extract_user_prompts(session_file)
@@ -174,13 +182,19 @@ def main() -> None:
         click.echo('No user prompts found in session.')
         return
 
+    if debug_print_only:
+        click.echo('\n=== Extracted Transcript (debug-print-only) ===\n')
+        click.echo(transcript_text)
+        click.echo('\n=== End Transcript ===\n')
+        return
+
     click.echo('Amending commit...')
     amend_commit_with_transcript(transcript_text)
     click.echo('\n✓ Done! Transcript added to commit.')
 
 
 def cli(args: list[str] | None = None):
-    main(args)
+    main(args, standalone_mode=False)
 
 
 if __name__ == '__main__':
